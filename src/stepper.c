@@ -77,9 +77,8 @@ static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 // Stepper ISR data struct. Contains the running data for the main stepper ISR.
 typedef struct {
   // Used by the bresenham line algorithm
-  uint32_t counter_x,        // Counter variables for the bresenham line tracer
-           counter_y, 
-           counter_z;
+  uint32_t counter[N_AXIS];   // Counter variables for the bresenham line tracer
+
   #ifdef STEP_PULSE_DELAY
     uint8_t step_bits;  // Stores out_bits output to complete the step pulse delay
   #endif
@@ -324,7 +323,9 @@ ISR(TIMER1_COMPA_vect)
         st.exec_block = &st_block_buffer[st.exec_block_index];
         
         // Initialize Bresenham line and distance counters
-        st.counter_x = st.counter_y = st.counter_z = (st.exec_block->step_event_count >> 1);
+        for (uint8_t axis_idx = 0; axis_idx < N_AXIS; axis_idx++) {
+          st.counter[axis_idx] = st.exec_block->step_event_count>>1;
+        }
       }
       st.dir_outbits = st.exec_block->direction_bits ^ dir_port_invert_mask; 
 
@@ -350,37 +351,37 @@ ISR(TIMER1_COMPA_vect)
   // Reset step out bits.
   st.step_outbits = 0; 
 
-  // Execute step displacement profile by Bresenham line algorithm
+  // Execute step displacement profile by Bresenham line algorithm  
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-    st.counter_x += st.steps[X_AXIS];
+    st.counter[X_AXIS] += st.steps[X_AXIS];
   #else
-    st.counter_x += st.exec_block->steps[X_AXIS];
+    st.counter[X_AXIS] += st.exec_block->steps[X_AXIS];
   #endif  
-  if (st.counter_x > st.exec_block->step_event_count) {
+  if (st.counter[X_AXIS] > st.exec_block->step_event_count) {
     st.step_outbits |= (1<<X_STEP_BIT);
-    st.counter_x -= st.exec_block->step_event_count;
+    st.counter[X_AXIS] -= st.exec_block->step_event_count;
     if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT)) { sys.position[X_AXIS]--; }
     else { sys.position[X_AXIS]++; }
   }
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-    st.counter_y += st.steps[Y_AXIS];
+    st.counter[Y_AXIS] += st.steps[Y_AXIS];
   #else
-    st.counter_y += st.exec_block->steps[Y_AXIS];
+    st.counter[Y_AXIS] += st.exec_block->steps[Y_AXIS];
   #endif    
-  if (st.counter_y > st.exec_block->step_event_count) {
+  if (st.counter[Y_AXIS] > st.exec_block->step_event_count) {
     st.step_outbits |= (1<<Y_STEP_BIT);
-    st.counter_y -= st.exec_block->step_event_count;
+    st.counter[Y_AXIS] -= st.exec_block->step_event_count;
     if (st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT)) { sys.position[Y_AXIS]--; }
     else { sys.position[Y_AXIS]++; }
   }
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-    st.counter_z += st.steps[Z_AXIS];
+    st.counter[Z_AXIS] += st.steps[Z_AXIS];
   #else
-    st.counter_z += st.exec_block->steps[Z_AXIS];
+    st.counter[Z_AXIS] += st.exec_block->steps[Z_AXIS];
   #endif  
-  if (st.counter_z > st.exec_block->step_event_count) {
+  if (st.counter[Z_AXIS] > st.exec_block->step_event_count) {
     st.step_outbits |= (1<<Z_STEP_BIT);
-    st.counter_z -= st.exec_block->step_event_count;
+    st.counter[Z_AXIS] -= st.exec_block->step_event_count;
     if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) { sys.position[Z_AXIS]--; }
     else { sys.position[Z_AXIS]++; }
   }  
