@@ -1,0 +1,17 @@
+Modifications to be done:
+-cpu_map step, dir and homing bits
+-cpu_map buffer sizes
+-nuts_and_bolts N_AXIS and axis indices
+-stepper.c axis counters in st-struct
+-stepper.c ISR: Counter initialization on new segment
+-stepper.c ISR: Adjust st.steps according to AMASS
+-stepper.c ISR: Bresenham
+-settings.c get_step/dir/lim_pin_mask
+-stepper.c prep_buffer: Copy Bresenham data to new ST-block
+
+config.h:
+  -#define defaults
+  -New defaults file
+
+settings.c:
+  -Axis settings
