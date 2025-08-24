@@ -548,18 +548,19 @@ void st_prep_buffer()
         // segment buffer finishes the prepped block, but the stepper ISR is still executing it. 
         st_prep_block = &st_block_buffer[prep.st_block_index];
         st_prep_block->direction_bits = pl_block->direction_bits;
+        uint8_t axis_idx;
         #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-          st_prep_block->steps[X_AXIS] = pl_block->steps[X_AXIS];
-          st_prep_block->steps[Y_AXIS] = pl_block->steps[Y_AXIS];
-          st_prep_block->steps[Z_AXIS] = pl_block->steps[Z_AXIS];
+          for (axis_idx = 0; axis_idx < N_AXIS; axis_idx++) {
+            st_prep_block->steps[axis_idx] = pl_block->steps[axis_idx];
+          }
           st_prep_block->step_event_count = pl_block->step_event_count;
         #else
           // With AMASS enabled, simply bit-shift multiply all Bresenham data by the max AMASS 
           // level, such that we never divide beyond the original data anywhere in the algorithm.
-          // If the original data is divided, we can lose a step from integer roundoff.
-          st_prep_block->steps[X_AXIS] = pl_block->steps[X_AXIS] << MAX_AMASS_LEVEL;
-          st_prep_block->steps[Y_AXIS] = pl_block->steps[Y_AXIS] << MAX_AMASS_LEVEL;
-          st_prep_block->steps[Z_AXIS] = pl_block->steps[Z_AXIS] << MAX_AMASS_LEVEL;
+          // If the original data is divided, we can lose a step from integer roundoff. 
+          for (axis_idx = 0; axis_idx < N_AXIS; axis_idx++) {
+          st_prep_block->steps[axis_idx] = pl_block->steps[axis_idx] << MAX_AMASS_LEVEL;
+          }
           st_prep_block->step_event_count = pl_block->step_event_count << MAX_AMASS_LEVEL;
         #endif
         
