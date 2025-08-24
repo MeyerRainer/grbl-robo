@@ -1,17 +1,40 @@
-Modifications to be done:
--cpu_map step, dir and homing bits
--cpu_map buffer sizes
--nuts_and_bolts N_AXIS and axis indices
--stepper.c axis counters in st-struct
--stepper.c ISR: Counter initialization on new segment
--stepper.c ISR: Adjust st.steps according to AMASS
--stepper.c ISR: Bresenham
--settings.c get_step/dir/lim_pin_mask
--stepper.c prep_buffer: Copy Bresenham data to new ST-block
-
+Changes made to allow for adding more axis:
+cpu_map.h
+  -buffer sizes
+stepper.c
+  ISR
+    -Counter initialization on new segment to for-loop
+    -Changed axis counters in st-struct to one array
+  prep_buffer
+    -pl_block to prep step counts to for-loop
+gcode.h
+  -float xyz[N_AXIS] array to N_AXIS in gc_values_t struct
 config.h:
   -#define defaults
   -New defaults file
 
-settings.c:
-  -Axis settings
+
+
+Changes to be made for each additional axis:
+config.h
+  -Select defaults settings
+  -Select CPU-map
+cpu_map.h
+  -Step, Dir and Lim bits
+  -Step, Dir and Lim masks
+nuts_and_bolts.h
+  -N_AXIS
+  -#define X_AXIS
+defaults.h
+  -Add axis settings
+gcode.c
+  -Remove axis word: Line 829
+report.c
+  -Print axis letter in front of setting
+settings.c
+  -Fetch default settings for axis
+  -Add axis bits to get_step/dir/lim_pin_mask() functions
+stepper.c
+  ISR
+    -Setting new segment steps to ST: st.exec_block->steps
+    -Bresenham block for the new axis

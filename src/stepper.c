@@ -334,6 +334,9 @@ ISR(TIMER1_COMPA_vect)
         st.steps[X_AXIS] = st.exec_block->steps[X_AXIS] >> st.exec_segment->amass_level;
         st.steps[Y_AXIS] = st.exec_block->steps[Y_AXIS] >> st.exec_segment->amass_level;
         st.steps[Z_AXIS] = st.exec_block->steps[Z_AXIS] >> st.exec_segment->amass_level;
+        #if N_AXIS > 3
+          st.steps[A_AXIS] = st.exec_block->steps[A_AXIS] >> st.exec_segment->amass_level;
+        #endif
       #endif
       
     } else {
@@ -385,6 +388,17 @@ ISR(TIMER1_COMPA_vect)
     if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) { sys.position[Z_AXIS]--; }
     else { sys.position[Z_AXIS]++; }
   }  
+  #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+    st.counter[A_AXIS] += st.steps[A_AXIS];
+  #else
+    st.counter[A_AXIS] += st.exec_block->steps[A_AXIS];
+  #endif  
+  if (st.counter[A_AXIS] > st.exec_block->step_event_count) {
+    st.step_outbits |= (1<<A_STEP_BIT);
+    st.counter[A_AXIS] -= st.exec_block->step_event_count;
+    if (st.exec_block->direction_bits & (1<<A_DIRECTION_BIT)) { sys.position[A_AXIS]--; }
+    else { sys.position[A_AXIS]++; }
+  }
 
   // During a homing cycle, lock out and prevent desired axes from moving.
   if (sys.state == STATE_HOMING) { st.step_outbits &= sys.homing_axis_lock; }   
