@@ -157,10 +157,6 @@ void limits_go_home(uint8_t cycle_mask)
   for (idx=0; idx<N_AXIS; idx++) {  
     // Initialize step pin masks
     step_pin[idx] = get_step_pin_mask(idx);
-    #ifdef COREXY    
-      if ((idx==A_MOTOR)||(idx==B_MOTOR)) { step_pin[idx] = (get_step_pin_mask(X_AXIS)|get_step_pin_mask(Y_AXIS)); } 
-    #endif
-
     if (bit_istrue(cycle_mask,bit(idx))) { 
       // Set target based on max_travel setting. Ensure homing switches engaged with search scalar.
       // NOTE: settings.max_travel[] is stored as a negative value.
@@ -184,20 +180,7 @@ void limits_go_home(uint8_t cycle_mask)
       // Set target location for active axes and setup computation for homing rate.
       if (bit_istrue(cycle_mask,bit(idx))) {
         n_active_axis++;
-        #ifdef COREXY
-          if (idx == X_AXIS) {
-            int32_t axis_position = system_convert_corexy_to_y_axis_steps(sys.position);
-            sys.position[A_MOTOR] = axis_position;
-            sys.position[B_MOTOR] = -axis_position;
-          } else if (idx == Y_AXIS) {
-            int32_t axis_position = system_convert_corexy_to_x_axis_steps(sys.position);
-            sys.position[A_MOTOR] = sys.position[B_MOTOR] = axis_position;
-          } else { 
-            sys.position[Z_AXIS] = 0; 
-          }
-        #else
-          sys.position[idx] = 0;
-        #endif
+        sys.position[idx] = 0;
         // Set target direction based on cycle mask and homing cycle approach state.
         // NOTE: This happens to compile smaller than any other implementation tried.
         if (bit_istrue(settings.homing_dir_mask,bit(idx))) {
@@ -233,12 +216,7 @@ void limits_go_home(uint8_t cycle_mask)
         for (idx=0; idx<N_AXIS; idx++) {
           if (axislock & step_pin[idx]) {
             if (limit_state & (1 << idx)) { 
-              #ifdef COREXY
-                if (idx==Z_AXIS) { axislock &= ~(step_pin[Z_AXIS]); }
-                else { axislock &= ~(step_pin[A_MOTOR]|step_pin[B_MOTOR]); }
-              #else
-                axislock &= ~(step_pin[idx]); 
-              #endif
+              axislock &= ~(step_pin[idx]); 
             }
           }
         }
@@ -303,24 +281,8 @@ void limits_go_home(uint8_t cycle_mask)
         } else {
           set_axis_position = lround(-settings.homing_pulloff*settings.steps_per_mm[idx]);
         }
-      #endif
-      
-      #ifdef COREXY    
-        if (idx==X_AXIS) { 
-          int32_t off_axis_position = system_convert_corexy_to_y_axis_steps(sys.position);
-          sys.position[A_MOTOR] = set_axis_position + off_axis_position;
-          sys.position[B_MOTOR] = set_axis_position - off_axis_position;          
-        } else if (idx==Y_AXIS) {
-          int32_t off_axis_position = system_convert_corexy_to_x_axis_steps(sys.position);
-          sys.position[A_MOTOR] = off_axis_position + set_axis_position;
-          sys.position[B_MOTOR] = off_axis_position - set_axis_position;
-        } else {
-          sys.position[idx] = set_axis_position;
-        }        
-      #else 
-        sys.position[idx] = set_axis_position;
-      #endif
-
+      #endif      
+      sys.position[idx] = set_axis_position;
     }
   }
   plan_sync_position(); // Sync planner position to homed machine position.

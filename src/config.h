@@ -141,15 +141,6 @@
 #define SAFETY_DOOR_SPINDLE_DELAY 4000
 #define SAFETY_DOOR_COOLANT_DELAY 1000
 
-// Enable CoreXY kinematics. Use ONLY with CoreXY machines. 
-// IMPORTANT: If homing is enabled, you must reconfigure the homing cycle #defines above to 
-// #define HOMING_CYCLE_0 (1<<X_AXIS) and #define HOMING_CYCLE_1 (1<<Y_AXIS)
-// NOTE: This configuration option alters the motion of the X and Y axes to principle of operation
-// defined at (http://corexy.com/theory.html). Motors are assumed to positioned and wired exactly as
-// described, if not, motions may move in strange directions. Grbl requires the CoreXY A and B motors
-// have the same steps per mm internally.
-// #define COREXY // Default disabled. Uncomment to enable.
-
 // Inverts pin logic of the control command pins. This essentially means when this option is enabled
 // you can use normally-closed switches, rather than the default normally-open switches.
 // NOTE: If you require individual control pins inverted, keep this macro disabled and simply alter

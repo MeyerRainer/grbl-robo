@@ -46,3 +46,4 @@ stepper.c
 Removed features: (TODO)
 
 - G2, G3, Canned cycles, G17-19
+- Corexy
