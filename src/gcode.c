@@ -319,14 +319,14 @@ uint8_t gc_execute_line(char *line)
           // case 'Q': // Not supported
           case 'S': word_bit = WORD_S; gc_block.values.s = value; break;
           case 'T': word_bit = WORD_T; break; // gc.values.t = int_value;
-          case 'X': word_bit = WORD_X; gc_block.values.xyz[X_AXIS] = value; axis_words |= (1<<X_AXIS); break;
-          case 'Y': word_bit = WORD_Y; gc_block.values.xyz[Y_AXIS] = value; axis_words |= (1<<Y_AXIS); break;
-          case 'Z': word_bit = WORD_Z; gc_block.values.xyz[Z_AXIS] = value; axis_words |= (1<<Z_AXIS); break;
-          case 'A': word_bit = WORD_A; gc_block.values.xyz[A_AXIS] = value; axis_words |= (1<<A_AXIS); break;
-          case 'B': word_bit = WORD_B; gc_block.values.xyz[B_AXIS] = value; axis_words |= (1<<B_AXIS); break;
-          case 'C': word_bit = WORD_C; gc_block.values.xyz[C_AXIS] = value; axis_words |= (1<<C_AXIS); break;
-          case 'U': word_bit = WORD_U; gc_block.values.xyz[U_AXIS] = value; axis_words |= (1<<U_AXIS); break;
-          case 'V': word_bit = WORD_V; gc_block.values.xyz[V_AXIS] = value; axis_words |= (1<<V_AXIS); break;
+          case 'X': word_bit = WORD_X; gc_block.values.motion_axis[X_AXIS] = value; axis_words |= (1<<X_AXIS); break;
+          case 'Y': word_bit = WORD_Y; gc_block.values.motion_axis[Y_AXIS] = value; axis_words |= (1<<Y_AXIS); break;
+          case 'Z': word_bit = WORD_Z; gc_block.values.motion_axis[Z_AXIS] = value; axis_words |= (1<<Z_AXIS); break;
+          case 'A': word_bit = WORD_A; gc_block.values.motion_axis[A_AXIS] = value; axis_words |= (1<<A_AXIS); break;
+          case 'B': word_bit = WORD_B; gc_block.values.motion_axis[B_AXIS] = value; axis_words |= (1<<B_AXIS); break;
+          case 'C': word_bit = WORD_C; gc_block.values.motion_axis[C_AXIS] = value; axis_words |= (1<<C_AXIS); break;
+          case 'U': word_bit = WORD_U; gc_block.values.motion_axis[U_AXIS] = value; axis_words |= (1<<U_AXIS); break;
+          case 'V': word_bit = WORD_V; gc_block.values.motion_axis[V_AXIS] = value; axis_words |= (1<<V_AXIS); break;
           default: FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND);
         } 
         
@@ -389,7 +389,7 @@ uint8_t gc_execute_line(char *line)
   // NOTE: Single-meaning value words are removed all at once at the end of error-checking, because
   // they are always used when present. This was done to save a few bytes of flash. For clarity, the
   // single-meaning value words may be removed as they are used. Also, axis words are treated in the
-  // same way. If there is an explicit/implicit axis command, XYZ words are always used and are 
+  // same way. If there is an explicit/implicit axis command, motion axis words are always used and are 
   // are removed at the end of error-checking.  
   
   // [1. Comments ]: MSG's NOT SUPPORTED. Comment handling performed by protocol.
@@ -446,12 +446,12 @@ uint8_t gc_execute_line(char *line)
   }
             
   // [12. Set length units ]: N/A
-  // Pre-convert XYZ coordinate values to millimeters, if applicable.
+  // Pre-convert motion axis coordinate values to millimeters, if applicable.
   uint8_t idx;
   if (gc_block.modal.units == UNITS_MODE_INCHES) {
     for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
       if (bit_istrue(axis_words,bit(idx)) ) {
-        gc_block.values.xyz[idx] *= MM_PER_INCH;
+        gc_block.values.motion_axis[idx] *= MM_PER_INCH;
       }
     }
   }
@@ -516,7 +516,7 @@ uint8_t gc_execute_line(char *line)
         // Update axes defined only in block. Always in machine coordinates. Can change non-active system.
         if (bit_istrue(axis_words,bit(idx)) ) {
           // L2: Update coordinate system axis to programmed value.
-          parameter_data[idx] = gc_block.values.xyz[idx]; 
+          parameter_data[idx] = gc_block.values.motion_axis[idx]; 
           }
       }
       break;
@@ -528,10 +528,10 @@ uint8_t gc_execute_line(char *line)
       // active coordinate system is selected, but is still active unless G92.1 disables it. 
       for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
         if (bit_istrue(axis_words,bit(idx)) ) {
-          gc_block.values.xyz[idx] = gc_state.position[idx]-coordinate_data[idx]-gc_block.values.xyz[idx];
-          if (idx == TOOL_LENGTH_OFFSET_AXIS) { gc_block.values.xyz[idx] -= gc_state.tool_length_offset; }
+          gc_block.values.motion_axis[idx] = gc_state.position[idx]-coordinate_data[idx]-gc_block.values.motion_axis[idx];
+          if (idx == TOOL_LENGTH_OFFSET_AXIS) { gc_block.values.motion_axis[idx] -= gc_state.tool_length_offset; }
         } else {
-          gc_block.values.xyz[idx] = gc_state.coord_offset[idx];
+          gc_block.values.motion_axis[idx] = gc_state.coord_offset[idx];
         }
       }
       break;
@@ -546,17 +546,17 @@ uint8_t gc_execute_line(char *line)
         if (axis_words) {
           for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used to save flash space.
             if ( bit_isfalse(axis_words,bit(idx)) ) {
-              gc_block.values.xyz[idx] = gc_state.position[idx]; // No axis word in block. Keep same axis position.
+              gc_block.values.motion_axis[idx] = gc_state.position[idx]; // No axis word in block. Keep same axis position.
             } else {
               // Update specified value according to distance mode or ignore if absolute override is active.
               // NOTE: G53 is never active with G28/30 since they are in the same modal group.
               if (gc_block.non_modal_command != NON_MODAL_ABSOLUTE_OVERRIDE) {
                 // Apply coordinate offsets based on distance mode.
                 if (gc_block.modal.distance == DISTANCE_MODE_ABSOLUTE) {
-                  gc_block.values.xyz[idx] += coordinate_data[idx] + gc_state.coord_offset[idx];
-                  if (idx == TOOL_LENGTH_OFFSET_AXIS) { gc_block.values.xyz[idx] += gc_state.tool_length_offset; }
+                  gc_block.values.motion_axis[idx] += coordinate_data[idx] + gc_state.coord_offset[idx];
+                  if (idx == TOOL_LENGTH_OFFSET_AXIS) { gc_block.values.motion_axis[idx] += gc_state.tool_length_offset; }
                 } else {  // Incremental mode
-                  gc_block.values.xyz[idx] += gc_state.position[idx];
+                  gc_block.values.motion_axis[idx] += gc_state.position[idx];
                 }
               }
             }
@@ -631,7 +631,7 @@ uint8_t gc_execute_line(char *line)
           //   an error, it issues an alarm to prevent further motion to the probe. It's also done there to 
           //   allow the planner buffer to empty and move off the probe trigger before another probing cycle.
           if (!axis_words) { FAIL(STATUS_GCODE_NO_AXIS_WORDS); } // [No axis words]
-          if (gc_check_same_position(gc_state.position, gc_block.values.xyz)) { FAIL(STATUS_GCODE_INVALID_TARGET); } // [Invalid target]
+          if (gc_check_same_position(gc_state.position, gc_block.values.motion_axis)) { FAIL(STATUS_GCODE_INVALID_TARGET); } // [Invalid target]
           break;
       } 
     }
@@ -702,11 +702,11 @@ uint8_t gc_execute_line(char *line)
   // [14. Cutter length compensation ]: G43.1 and G49 supported. G43 NOT SUPPORTED.
   // NOTE: If G43 were supported, its operation wouldn't be any different from G43.1 in terms
   // of execution. The error-checking step would simply load the offset value into the correct
-  // axis of the block XYZ value array. 
+  // axis of the block motion axis value array. 
   if (axis_command == AXIS_COMMAND_TOOL_LENGTH_OFFSET ) { // Indicates a change.
     gc_state.modal.tool_length = gc_block.modal.tool_length;
     if (gc_state.modal.tool_length == TOOL_LENGTH_OFFSET_ENABLE_DYNAMIC) { // G43.1
-      gc_state.tool_length_offset = gc_block.values.xyz[TOOL_LENGTH_OFFSET_AXIS];
+      gc_state.tool_length_offset = gc_block.values.motion_axis[TOOL_LENGTH_OFFSET_AXIS];
     } else { // G49
       gc_state.tool_length_offset = 0.0;
     }
@@ -738,9 +738,9 @@ uint8_t gc_execute_line(char *line)
       // and absolute and incremental modes.
       if (axis_command) {
         #ifdef USE_LINE_NUMBERS
-          mc_line(gc_block.values.xyz, -1.0, false, gc_state.line_number);
+          mc_line(gc_block.values.motion_axis, -1.0, false, gc_state.line_number);
         #else
-          mc_line(gc_block.values.xyz, -1.0, false);
+          mc_line(gc_block.values.motion_axis, -1.0, false);
         #endif
       }
       #ifdef USE_LINE_NUMBERS
@@ -757,7 +757,7 @@ uint8_t gc_execute_line(char *line)
       settings_write_coord_data(SETTING_INDEX_G30,gc_state.position);
       break;
     case NON_MODAL_SET_COORDINATE_OFFSET:
-      memcpy(gc_state.coord_offset,gc_block.values.xyz,sizeof(gc_block.values.xyz));
+      memcpy(gc_state.coord_offset,gc_block.values.motion_axis,sizeof(gc_block.values.motion_axis));
       break;
     case NON_MODAL_RESET_COORDINATE_OFFSET: 
       clear_vector(gc_state.coord_offset); // Disable G92 offsets by zeroing offset vector.
@@ -774,53 +774,53 @@ uint8_t gc_execute_line(char *line)
       switch (gc_state.modal.motion) {
         case MOTION_MODE_SEEK:
           #ifdef USE_LINE_NUMBERS
-            mc_line(gc_block.values.xyz, -1.0, false, gc_state.line_number);
+            mc_line(gc_block.values.motion_axis, -1.0, false, gc_state.line_number);
           #else
-            mc_line(gc_block.values.xyz, -1.0, false);
+            mc_line(gc_block.values.motion_axis, -1.0, false);
           #endif
           break;
         case MOTION_MODE_LINEAR:
           #ifdef USE_LINE_NUMBERS
-            mc_line(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, gc_state.line_number);
+            mc_line(gc_block.values.motion_axis, gc_state.feed_rate, gc_state.modal.feed_rate, gc_state.line_number);
           #else
-            mc_line(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate);
+            mc_line(gc_block.values.motion_axis, gc_state.feed_rate, gc_state.modal.feed_rate);
           #endif
           break;
         case MOTION_MODE_PROBE_TOWARD: 
-          // NOTE: gc_block.values.xyz is returned from mc_probe_cycle with the updated position value. So
+          // NOTE: gc_block.values.motion axis is returned from mc_probe_cycle with the updated position value. So
           // upon a successful probing cycle, the machine position and the returned value should be the same.
           #ifdef USE_LINE_NUMBERS
-            mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, false, false, gc_state.line_number);
+            mc_probe_cycle(gc_block.values.motion_axis, gc_state.feed_rate, gc_state.modal.feed_rate, false, false, gc_state.line_number);
           #else
-            mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, false, false);
+            mc_probe_cycle(gc_block.values.motion_axis, gc_state.feed_rate, gc_state.modal.feed_rate, false, false);
           #endif
           break;
         case MOTION_MODE_PROBE_TOWARD_NO_ERROR:
           #ifdef USE_LINE_NUMBERS
-            mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, false, true, gc_state.line_number);
+            mc_probe_cycle(gc_block.values.motion_axis, gc_state.feed_rate, gc_state.modal.feed_rate, false, true, gc_state.line_number);
           #else
-            mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, false, true);
+            mc_probe_cycle(gc_block.values.motion_axis, gc_state.feed_rate, gc_state.modal.feed_rate, false, true);
           #endif
           break;
         case MOTION_MODE_PROBE_AWAY:
           #ifdef USE_LINE_NUMBERS
-            mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, true, false, gc_state.line_number);
+            mc_probe_cycle(gc_block.values.motion_axis, gc_state.feed_rate, gc_state.modal.feed_rate, true, false, gc_state.line_number);
           #else
-            mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, true, false);
+            mc_probe_cycle(gc_block.values.motion_axis, gc_state.feed_rate, gc_state.modal.feed_rate, true, false);
           #endif
           break;
         case MOTION_MODE_PROBE_AWAY_NO_ERROR:
           #ifdef USE_LINE_NUMBERS
-            mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, true, true, gc_state.line_number);
+            mc_probe_cycle(gc_block.values.motion_axis, gc_state.feed_rate, gc_state.modal.feed_rate, true, true, gc_state.line_number);
           #else        
-            mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, true, true);
+            mc_probe_cycle(gc_block.values.motion_axis, gc_state.feed_rate, gc_state.modal.feed_rate, true, true);
           #endif
       }
     
       // As far as the parser is concerned, the position is now == target. In reality the
       // motion control system might still be processing the action and the real tool position
       // in any intermediate location.
-      memcpy(gc_state.position, gc_block.values.xyz, sizeof(gc_block.values.xyz)); // gc_state.position[] = gc_block.values.xyz[]
+      memcpy(gc_state.position, gc_block.values.motion_axis, sizeof(gc_block.values.motion_axis)); // gc_state.position[] = gc_block.values.motion_axis[]
     }
   }
   

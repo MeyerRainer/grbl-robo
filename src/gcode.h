@@ -148,7 +148,7 @@ typedef struct {
   float p;         // G10 or dwell parameters
   float s;         // Spindle speed
   uint8_t t;       // Tool selection
-  float xyz[N_AXIS];    // X,Y,Z,A,B,C,U,V Motion axis
+  float motion_axis[N_AXIS];    // X,Y,Z,A,B,C,U,V Motion axis
 } gc_values_t;
 
 
