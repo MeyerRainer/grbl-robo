@@ -52,6 +52,30 @@
     #define DEFAULT_A_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
     #define DEFAULT_A_MAX_TRAVEL 200.0 // mm
   #endif
+  #ifdef B_AXIS
+    #define DEFAULT_B_STEPS_PER_MM 250.0
+    #define DEFAULT_B_MAX_RATE 500.0 // mm/min
+    #define DEFAULT_B_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
+    #define DEFAULT_B_MAX_TRAVEL 200.0 // mm
+  #endif
+  #ifdef C_AXIS
+    #define DEFAULT_C_STEPS_PER_MM 250.0
+    #define DEFAULT_C_MAX_RATE 500.0 // mm/min
+    #define DEFAULT_C_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
+    #define DEFAULT_C_MAX_TRAVEL 200.0 // mm
+  #endif
+  #ifdef U_AXIS
+    #define DEFAULT_U_STEPS_PER_MM 250.0
+    #define DEFAULT_U_MAX_RATE 500.0 // mm/min
+    #define DEFAULT_U_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
+    #define DEFAULT_U_MAX_TRAVEL 200.0 // mm
+  #endif
+  #ifdef V_AXIS
+    #define DEFAULT_V_STEPS_PER_MM 250.0
+    #define DEFAULT_V_MAX_RATE 500.0 // mm/min
+    #define DEFAULT_V_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
+    #define DEFAULT_V_MAX_TRAVEL 200.0 // mm
+  #endif
   // Non-axis settings
   #define DEFAULT_STEP_PULSE_MICROSECONDS 10
   #define DEFAULT_STEPPING_INVERT_MASK 0

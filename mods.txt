@@ -19,16 +19,19 @@ Changes to be made for each additional axis:
 config.h
   -Select defaults settings
   -Select CPU-map
-cpu_map.h
-  -Step, Dir and Lim bits
-  -Step, Dir and Lim masks
 nuts_and_bolts.h
   -N_AXIS
   -#define X_AXIS
+cpu_map.h
+  -Step, Dir and Lim bits
+  -Step, Dir and Lim masks
 defaults.h
   -Add axis settings
+gcode.h
+  -#define axis word
 gcode.c
   -Remove axis word: Line 829
+  -Add axis command: Line ~350
 report.c
   -Print axis letter in front of setting
 settings.c

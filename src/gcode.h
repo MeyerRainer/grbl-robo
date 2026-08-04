@@ -139,6 +139,10 @@
 #define WORD_Y  11
 #define WORD_Z  12
 #define WORD_A  13
+#define WORD_B  14
+#define WORD_C  15
+#define WORD_U  16
+#define WORD_V  17
 
 
 // NOTE: When this struct is zeroed, the above defines set the defaults for the system.
