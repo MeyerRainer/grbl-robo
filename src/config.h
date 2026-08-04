@@ -36,9 +36,7 @@
 // Serial baud rate
 #define BAUD_RATE 115200
 
-// Default cpu mappings. Grbl officially supports the Arduino Uno only. Other processor types
-// may exist from user-supplied templates or directly user-defined in cpu_map.h
-// #define CPU_MAP_ATMEGA328P // Arduino Uno CPU
+// Default cpu mappings. Grbl Robo only supports the Arduino Uno.
 #define CPU_MAP_ATMEGA2560
 
 // Define realtime command special characters. These characters are 'picked-off' directly from the

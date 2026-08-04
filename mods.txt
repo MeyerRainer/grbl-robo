@@ -41,3 +41,8 @@ stepper.c
   ISR
     -Setting new segment steps to ST: st.exec_block->steps
     -Bresenham block for the new axis
+
+
+Removed features: (TODO)
+
+- G2, G3, Canned cycles, G17-19

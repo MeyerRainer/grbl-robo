@@ -331,8 +331,6 @@ void report_gcode_modes()
   switch (gc_state.modal.motion) {
     case MOTION_MODE_SEEK : printPgmString(PSTR("G0")); break;
     case MOTION_MODE_LINEAR : printPgmString(PSTR("G1")); break;
-    case MOTION_MODE_CW_ARC : printPgmString(PSTR("G2")); break;
-    case MOTION_MODE_CCW_ARC : printPgmString(PSTR("G3")); break;
     case MOTION_MODE_NONE : printPgmString(PSTR("G80")); break;
     default: 
       printPgmString(PSTR("G38."));
@@ -341,13 +339,7 @@ void report_gcode_modes()
 
   printPgmString(PSTR(" G"));
   print_uint8_base10(gc_state.modal.coord_select+54);
-  
-  switch (gc_state.modal.plane_select) {
-    case PLANE_SELECT_XY : printPgmString(PSTR(" G17")); break;
-    case PLANE_SELECT_ZX : printPgmString(PSTR(" G18")); break;
-    case PLANE_SELECT_YZ : printPgmString(PSTR(" G19")); break;
-  }
-  
+    
   if (gc_state.modal.units == UNITS_MODE_MM) { printPgmString(PSTR(" G21")); }
   else { printPgmString(PSTR(" G20")); }
   

@@ -83,14 +83,12 @@ uint8_t gc_execute_line(char *line)
   memset(&gc_block, 0, sizeof(parser_block_t)); // Initialize the parser block struct.
   memcpy(&gc_block.modal,&gc_state.modal,sizeof(gc_modal_t)); // Copy current modes
   uint8_t axis_command = AXIS_COMMAND_NONE;
-  uint8_t axis_0, axis_1, axis_linear;
   uint8_t coord_select = 0; // Tracks G10 P coordinate selection for execution
   float coordinate_data[N_AXIS]; // Multi-use variable to store coordinate data for execution
   float parameter_data[N_AXIS]; // Multi-use variable to store parameter data for execution
   
   // Initialize bitflag tracking variables for axis indices compatible operations.
-  uint8_t axis_words = 0; // XYZ tracking
-  uint8_t ijk_words = 0; // IJK tracking 
+  uint8_t axis_words = 0; // Motion axis tracking
 
   // Initialize command and value words variables. Tracks words contained in this block.
   uint16_t command_words = 0; // G and M command words. Also used for modal group violations.
@@ -189,8 +187,6 @@ uint8_t gc_execute_line(char *line)
             switch(int_value) {
               case 0: gc_block.modal.motion = MOTION_MODE_SEEK; break; // G0
               case 1: gc_block.modal.motion = MOTION_MODE_LINEAR; break; // G1
-              case 2: gc_block.modal.motion = MOTION_MODE_CW_ARC; break; // G2
-              case 3: gc_block.modal.motion = MOTION_MODE_CCW_ARC; break; // G3
               case 38: 
                 switch(mantissa) {
                   case 20: gc_block.modal.motion = MOTION_MODE_PROBE_TOWARD; break; // G38.2
@@ -204,24 +200,11 @@ uint8_t gc_execute_line(char *line)
               case 80: gc_block.modal.motion = MOTION_MODE_NONE; break; // G80
             }            
             break;
-          case 17: case 18: case 19: 
-            word_bit = MODAL_GROUP_G2; 
-            switch(int_value) {
-              case 17: gc_block.modal.plane_select = PLANE_SELECT_XY; break;
-              case 18: gc_block.modal.plane_select = PLANE_SELECT_ZX; break;
-              case 19: gc_block.modal.plane_select = PLANE_SELECT_YZ; break;
-            }
-            break;
           case 90: case 91: 
             if (mantissa == 0) {
               word_bit = MODAL_GROUP_G3; 
               if (int_value == 90) { gc_block.modal.distance = DISTANCE_MODE_ABSOLUTE; } // G90
               else { gc_block.modal.distance = DISTANCE_MODE_INCREMENTAL; } // G91
-            } else {
-              word_bit = MODAL_GROUP_G4;
-              if ((mantissa != 10) || (int_value == 90)) { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [G90.1 not supported]
-              mantissa = 0; // Set to zero to indicate valid non-integer G command.
-              // Otherwise, arc IJK incremental mode is default. G91.1 does nothing.
             }
             break;
           case 93: case 94: 
@@ -257,7 +240,7 @@ uint8_t gc_execute_line(char *line)
           case 54: case 55: case 56: case 57: case 58: case 59: 
             // NOTE: G59.x are not supported. (But their int_values would be 60, 61, and 62.)
             word_bit = MODAL_GROUP_G12;
-            gc_block.modal.coord_select = int_value-54; // Shift to array indexing.
+            gc_block.modal.coord_select = int_value - 54; // Shift to array indexing.
             break;
           case 61:
             word_bit = MODAL_GROUP_G13;
@@ -330,15 +313,10 @@ uint8_t gc_execute_line(char *line)
         switch(letter){
           case 'F': word_bit = WORD_F; gc_block.values.f = value; break;
           // case 'H': // Not supported
-          case 'I': word_bit = WORD_I; gc_block.values.ijk[X_AXIS] = value; ijk_words |= (1<<X_AXIS); break;
-          case 'J': word_bit = WORD_J; gc_block.values.ijk[Y_AXIS] = value; ijk_words |= (1<<Y_AXIS); break;
-          case 'K': word_bit = WORD_K; gc_block.values.ijk[Z_AXIS] = value; ijk_words |= (1<<Z_AXIS); break;
-          case 'L': word_bit = WORD_L; gc_block.values.l = int_value; break;
           case 'N': word_bit = WORD_N; gc_block.values.n = trunc(value); break;
           case 'P': word_bit = WORD_P; gc_block.values.p = value; break;
           // NOTE: For certain commands, P value must be an integer, but none of these commands are supported.
           // case 'Q': // Not supported
-          case 'R': word_bit = WORD_R; gc_block.values.r = value; break;
           case 'S': word_bit = WORD_S; gc_block.values.s = value; break;
           case 'T': word_bit = WORD_T; break; // gc.values.t = int_value;
           case 'X': word_bit = WORD_X; gc_block.values.xyz[X_AXIS] = value; axis_words |= (1<<X_AXIS); break;
@@ -466,24 +444,6 @@ uint8_t gc_execute_line(char *line)
     if (bit_isfalse(value_words,bit(WORD_P))) { FAIL(STATUS_GCODE_VALUE_WORD_MISSING); } // [P word missing]
     bit_false(value_words,bit(WORD_P));
   }
-  
-  // [11. Set active plane ]: N/A
-  switch (gc_block.modal.plane_select) {
-    case PLANE_SELECT_XY:
-      axis_0 = X_AXIS;
-      axis_1 = Y_AXIS;
-      axis_linear = Z_AXIS;
-      break;
-    case PLANE_SELECT_ZX:
-      axis_0 = Z_AXIS;
-      axis_1 = X_AXIS;
-      axis_linear = Y_AXIS;
-      break;
-    default: // case PLANE_SELECT_YZ:
-      axis_0 = Y_AXIS;
-      axis_1 = Z_AXIS;
-      axis_linear = X_AXIS;
-  }   
             
   // [12. Set length units ]: N/A
   // Pre-convert XYZ coordinate values to millimeters, if applicable.
@@ -540,15 +500,11 @@ uint8_t gc_execute_line(char *line)
       // [G10 L2 Errors]: R word NOT SUPPORTED. P value not 0 to nCoordSys(max 9). Axis words missing.
       // [G10 L20 Errors]: P must be 0 to nCoordSys(max 9). Axis words missing.
       if (!axis_words) { FAIL(STATUS_GCODE_NO_AXIS_WORDS) }; // [No axis words]
-      if (bit_isfalse(value_words,((1<<WORD_P)|(1<<WORD_L)))) { FAIL(STATUS_GCODE_VALUE_WORD_MISSING); } // [P/L word missing]
+      if (bit_isfalse(value_words,((1<<WORD_P)))) { FAIL(STATUS_GCODE_VALUE_WORD_MISSING); } // [P word missing]
       coord_select = trunc(gc_block.values.p); // Convert p value to int.
       if (coord_select > N_COORDINATE_SYSTEM) { FAIL(STATUS_GCODE_UNSUPPORTED_COORD_SYS); } // [Greater than N sys]
-      if (gc_block.values.l != 20) {
-        if (gc_block.values.l == 2) {
-          if (bit_istrue(value_words,bit(WORD_R))) { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [G10 L2 R not supported]
-        } else { FAIL(STATUS_GCODE_UNSUPPORTED_COMMAND); } // [Unsupported L]
-      }
-      bit_false(value_words,(bit(WORD_L)|bit(WORD_P)));
+      
+      bit_false(value_words,(bit(WORD_P)));
       
       // Determine coordinate system to change and try to load from EEPROM.
       if (coord_select > 0) { coord_select--; } // Adjust P1-P6 index to EEPROM coordinate data indexing.
@@ -559,15 +515,9 @@ uint8_t gc_execute_line(char *line)
       for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used.
         // Update axes defined only in block. Always in machine coordinates. Can change non-active system.
         if (bit_istrue(axis_words,bit(idx)) ) {
-          if (gc_block.values.l == 20) {
-            // L20: Update coordinate system axis at current position (with modifiers) with programmed value
-            parameter_data[idx] = gc_state.position[idx]-gc_state.coord_offset[idx]-gc_block.values.xyz[idx];
-            if (idx == TOOL_LENGTH_OFFSET_AXIS) { parameter_data[idx] -= gc_state.tool_length_offset; }
-          } else {
-            // L2: Update coordinate system axis to programmed value.
-            parameter_data[idx] = gc_block.values.xyz[idx]; 
+          // L2: Update coordinate system axis to programmed value.
+          parameter_data[idx] = gc_block.values.xyz[idx]; 
           }
-        }
       }
       break;
     case NON_MODAL_SET_COORDINATE_OFFSET:
@@ -674,141 +624,6 @@ uint8_t gc_execute_line(char *line)
           if (!axis_words) { axis_command = AXIS_COMMAND_NONE; }
 
           break;
-        case MOTION_MODE_CW_ARC: case MOTION_MODE_CCW_ARC:
-          // [G2/3 Errors All-Modes]: Feed rate undefined.
-          // [G2/3 Radius-Mode Errors]: No axis words in selected plane. Target point is same as current.
-          // [G2/3 Offset-Mode Errors]: No axis words and/or offsets in selected plane. The radius to the current 
-          //   point and the radius to the target point differs more than 0.002mm (EMC def. 0.5mm OR 0.005mm and 0.1% radius).   
-          // [G2/3 Full-Circle-Mode Errors]: NOT SUPPORTED. Axis words exist. No offsets programmed. P must be an integer.        
-          // NOTE: Both radius and offsets are required for arc tracing and are pre-computed with the error-checking.
-        
-          if (!axis_words) { FAIL(STATUS_GCODE_NO_AXIS_WORDS); } // [No axis words]
-          if (!(axis_words & (bit(axis_0)|bit(axis_1)))) { FAIL(STATUS_GCODE_NO_AXIS_WORDS_IN_PLANE); } // [No axis words in plane]
-        
-          // Calculate the change in position along each selected axis
-          float x,y;
-          x = gc_block.values.xyz[axis_0]-gc_state.position[axis_0]; // Delta x between current position and target
-          y = gc_block.values.xyz[axis_1]-gc_state.position[axis_1]; // Delta y between current position and target
-
-          if (value_words & bit(WORD_R)) { // Arc Radius Mode  
-            bit_false(value_words,bit(WORD_R));
-            if (gc_check_same_position(gc_state.position, gc_block.values.xyz)) { FAIL(STATUS_GCODE_INVALID_TARGET); } // [Invalid target]
-          
-            // Convert radius value to proper units.
-            if (gc_block.modal.units == UNITS_MODE_INCHES) { gc_block.values.r *= MM_PER_INCH; }
-            /*  We need to calculate the center of the circle that has the designated radius and passes
-                through both the current position and the target position. This method calculates the following
-                set of equations where [x,y] is the vector from current to target position, d == magnitude of 
-                that vector, h == hypotenuse of the triangle formed by the radius of the circle, the distance to
-                the center of the travel vector. A vector perpendicular to the travel vector [-y,x] is scaled to the 
-                length of h [-y/d*h, x/d*h] and added to the center of the travel vector [x/2,y/2] to form the new point 
-                [i,j] at [x/2-y/d*h, y/2+x/d*h] which will be the center of our arc.
-    
-                d^2 == x^2 + y^2
-                h^2 == r^2 - (d/2)^2
-                i == x/2 - y/d*h
-                j == y/2 + x/d*h
-    
-                                                                     O <- [i,j]
-                                                                  -  |
-                                                        r      -     |
-                                                            -        |
-                                                         -           | h
-                                                      -              |
-                                        [0,0] ->  C -----------------+--------------- T  <- [x,y]
-                                                  | <------ d/2 ---->|
-              
-                C - Current position
-                T - Target position
-                O - center of circle that pass through both C and T
-                d - distance from C to T
-                r - designated radius
-                h - distance from center of CT to O
-    
-                Expanding the equations:
- 
-                d -> sqrt(x^2 + y^2)
-                h -> sqrt(4 * r^2 - x^2 - y^2)/2
-                i -> (x - (y * sqrt(4 * r^2 - x^2 - y^2)) / sqrt(x^2 + y^2)) / 2 
-                j -> (y + (x * sqrt(4 * r^2 - x^2 - y^2)) / sqrt(x^2 + y^2)) / 2
-   
-                Which can be written:
-    
-                i -> (x - (y * sqrt(4 * r^2 - x^2 - y^2))/sqrt(x^2 + y^2))/2
-                j -> (y + (x * sqrt(4 * r^2 - x^2 - y^2))/sqrt(x^2 + y^2))/2
-    
-                Which we for size and speed reasons optimize to:
- 
-                h_x2_div_d = sqrt(4 * r^2 - x^2 - y^2)/sqrt(x^2 + y^2)
-                i = (x - (y * h_x2_div_d))/2
-                j = (y + (x * h_x2_div_d))/2       
-            */      
-
-            // First, use h_x2_div_d to compute 4*h^2 to check if it is negative or r is smaller
-            // than d. If so, the sqrt of a negative number is complex and error out.
-            float h_x2_div_d = 4.0 * gc_block.values.r*gc_block.values.r - x*x - y*y;
-
-            if (h_x2_div_d < 0) { FAIL(STATUS_GCODE_ARC_RADIUS_ERROR); } // [Arc radius error]
-    
-            // Finish computing h_x2_div_d.
-            h_x2_div_d = -sqrt(h_x2_div_d)/hypot_f(x,y); // == -(h * 2 / d)
-            // Invert the sign of h_x2_div_d if the circle is counter clockwise (see sketch below)
-            if (gc_block.modal.motion == MOTION_MODE_CCW_ARC) { h_x2_div_d = -h_x2_div_d; }  
-
-            /* The counter clockwise circle lies to the left of the target direction. When offset is positive,
-               the left hand circle will be generated - when it is negative the right hand circle is generated.
-          
-                                                                   T  <-- Target position
-                                                   
-                                                                   ^ 
-                        Clockwise circles with this center         |          Clockwise circles with this center will have
-                        will have > 180 deg of angular travel      |          < 180 deg of angular travel, which is a good thing!
-                                                         \         |          /   
-            center of arc when h_x2_div_d is positive ->  x <----- | -----> x <- center of arc when h_x2_div_d is negative
-                                                                   |
-                                                                   |
-                                                   
-                                                                   C  <-- Current position                                
-            */  
-            // Negative R is g-code-alese for "I want a circle with more than 180 degrees of travel" (go figure!), 
-            // even though it is advised against ever generating such circles in a single line of g-code. By 
-            // inverting the sign of h_x2_div_d the center of the circles is placed on the opposite side of the line of
-            // travel and thus we get the unadvisably long arcs as prescribed.
-            if (gc_block.values.r < 0) { 
-                h_x2_div_d = -h_x2_div_d; 
-                gc_block.values.r = -gc_block.values.r; // Finished with r. Set to positive for mc_arc
-            }        
-            // Complete the operation by calculating the actual center of the arc
-            gc_block.values.ijk[axis_0] = 0.5*(x-(y*h_x2_div_d));
-            gc_block.values.ijk[axis_1] = 0.5*(y+(x*h_x2_div_d));
-          
-          } else { // Arc Center Format Offset Mode  
-            if (!(ijk_words & (bit(axis_0)|bit(axis_1)))) { FAIL(STATUS_GCODE_NO_OFFSETS_IN_PLANE); } // [No offsets in plane]
-            bit_false(value_words,(bit(WORD_I)|bit(WORD_J)|bit(WORD_K)));  
-          
-            // Convert IJK values to proper units.
-            if (gc_block.modal.units == UNITS_MODE_INCHES) {
-              for (idx=0; idx<N_AXIS; idx++) { // Axes indices are consistent, so loop may be used to save flash space.
-                if (ijk_words & bit(idx)) { gc_block.values.ijk[idx] *= MM_PER_INCH; }
-              }
-            }         
-
-            // Arc radius from center to target
-            x -= gc_block.values.ijk[axis_0]; // Delta x between circle center and target
-            y -= gc_block.values.ijk[axis_1]; // Delta y between circle center and target
-            float target_r = hypot_f(x,y); 
-
-            // Compute arc radius for mc_arc. Defined from current location to center.
-            gc_block.values.r = hypot_f(gc_block.values.ijk[axis_0], gc_block.values.ijk[axis_1]); 
-            
-            // Compute difference between current location and target radii for final error-checks.
-            float delta_r = fabs(target_r-gc_block.values.r);
-            if (delta_r > 0.005) { 
-              if (delta_r > 0.5) { FAIL(STATUS_GCODE_INVALID_TARGET); } // [Arc definition error] > 0.5mm
-              if (delta_r > (0.001*gc_block.values.r)) { FAIL(STATUS_GCODE_INVALID_TARGET); } // [Arc definition error] > 0.005mm AND 0.1% radius
-            }
-          }
-          break;
         case MOTION_MODE_PROBE_TOWARD: case MOTION_MODE_PROBE_TOWARD_NO_ERROR:
         case MOTION_MODE_PROBE_AWAY: case MOTION_MODE_PROBE_AWAY_NO_ERROR:
           // [G38 Errors]: Target is same current. No axis words. Cutter compensation is enabled. Feed rate
@@ -878,9 +693,6 @@ uint8_t gc_execute_line(char *line)
   // [10. Dwell ]:
   if (gc_block.non_modal_command == NON_MODAL_DWELL) { mc_dwell(gc_block.values.p); }
   
-  // [11. Set active plane ]:
-  gc_state.modal.plane_select = gc_block.modal.plane_select;  
-
   // [12. Set length units ]:
   gc_state.modal.units = gc_block.modal.units;
 
@@ -974,24 +786,6 @@ uint8_t gc_execute_line(char *line)
             mc_line(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate);
           #endif
           break;
-        case MOTION_MODE_CW_ARC: 
-          #ifdef USE_LINE_NUMBERS
-            mc_arc(gc_state.position, gc_block.values.xyz, gc_block.values.ijk, gc_block.values.r, 
-              gc_state.feed_rate, gc_state.modal.feed_rate, axis_0, axis_1, axis_linear, true, gc_state.line_number);  
-          #else
-            mc_arc(gc_state.position, gc_block.values.xyz, gc_block.values.ijk, gc_block.values.r, 
-              gc_state.feed_rate, gc_state.modal.feed_rate, axis_0, axis_1, axis_linear, true); 
-          #endif
-          break;        
-        case MOTION_MODE_CCW_ARC:
-          #ifdef USE_LINE_NUMBERS
-            mc_arc(gc_state.position, gc_block.values.xyz, gc_block.values.ijk, gc_block.values.r, 
-              gc_state.feed_rate, gc_state.modal.feed_rate, axis_0, axis_1, axis_linear, false, gc_state.line_number);  
-          #else
-            mc_arc(gc_state.position, gc_block.values.xyz, gc_block.values.ijk, gc_block.values.r, 
-              gc_state.feed_rate, gc_state.modal.feed_rate, axis_0, axis_1, axis_linear, false); 
-          #endif
-          break;
         case MOTION_MODE_PROBE_TOWARD: 
           // NOTE: gc_block.values.xyz is returned from mc_probe_cycle with the updated position value. So
           // upon a successful probing cycle, the machine position and the returned value should be the same.
@@ -1047,7 +841,6 @@ uint8_t gc_execute_line(char *line)
 	  // and [M-code 7,8,9] reset to [G1,G17,G90,G94,G40,G54,M5,M9,M48]. The remaining modal groups
 	  // [G-code 4,6,8,10,13,14,15] and [M-code 4,5,6] and the modal words [F,S,T,H] do not reset.
 	  gc_state.modal.motion = MOTION_MODE_LINEAR;
-	  gc_state.modal.plane_select = PLANE_SELECT_XY;
 	  gc_state.modal.distance = DISTANCE_MODE_ABSOLUTE;
 	  gc_state.modal.feed_rate = FEED_RATE_MODE_UNITS_PER_MIN;
 	  // gc_state.modal.cutter_comp = CUTTER_COMP_DISABLE; // Not supported.

@@ -30,10 +30,8 @@
 // and are similar/identical to other g-code interpreters by manufacturers (Haas,Fanuc,Mazak,etc).
 // NOTE: Modal group define values must be sequential and starting from zero.
 #define MODAL_GROUP_G0 0 // [G4,G10,G28,G28.1,G30,G30.1,G53,G92,G92.1] Non-modal
-#define MODAL_GROUP_G1 1 // [G0,G1,G2,G3,G38.2,G38.3,G38.4,G38.5,G80] Motion
-#define MODAL_GROUP_G2 2 // [G17,G18,G19] Plane selection
+#define MODAL_GROUP_G1 1 // [G0,G1,G38.2,G38.3,G38.4,G38.5,G80] Motion
 #define MODAL_GROUP_G3 3 // [G90,G91] Distance mode
-#define MODAL_GROUP_G4 4 // [G91.1] Arc IJK distance mode
 #define MODAL_GROUP_G5 5 // [G93,G94] Feed rate mode
 #define MODAL_GROUP_G6 6 // [G20,G21] Units
 #define MODAL_GROUP_G7 7 // [G40] Cutter radius compensation mode. G41/42 NOT SUPPORTED.
@@ -67,25 +65,15 @@
 // Modal Group G1: Motion modes
 #define MOTION_MODE_SEEK 0 // G0 (Default: Must be zero)
 #define MOTION_MODE_LINEAR 1 // G1
-#define MOTION_MODE_CW_ARC 2  // G2
-#define MOTION_MODE_CCW_ARC 3  // G3
 #define MOTION_MODE_PROBE_TOWARD 4 // G38.2 NOTE: G38.2, G38.3, G38.4, G38.5 must be sequential. See report_gcode_modes().
 #define MOTION_MODE_PROBE_TOWARD_NO_ERROR 5 // G38.3
 #define MOTION_MODE_PROBE_AWAY 6 // G38.4
 #define MOTION_MODE_PROBE_AWAY_NO_ERROR 7 // G38.5
 #define MOTION_MODE_NONE 8 // G80
 
-// Modal Group G2: Plane select
-#define PLANE_SELECT_XY 0 // G17 (Default: Must be zero)
-#define PLANE_SELECT_ZX 1 // G18
-#define PLANE_SELECT_YZ 2 // G19
-
 // Modal Group G3: Distance mode
 #define DISTANCE_MODE_ABSOLUTE 0 // G90 (Default: Must be zero)
 #define DISTANCE_MODE_INCREMENTAL 1 // G91
-
-// Modal Group G4: Arc IJK distance mode
-#define DISTANCE_ARC_MODE_INCREMENTAL 0 // G91.1 (Default: Must be zero)
 
 // Modal Group M4: Program flow
 #define PROGRAM_FLOW_RUNNING 0 // (Default: Must be zero)
@@ -125,17 +113,12 @@
 
 
 // Define parameter word mapping.
-#define WORD_F  0
-#define WORD_I  1
-#define WORD_J  2
-#define WORD_K  3
-#define WORD_L  4
-#define WORD_N  5
-#define WORD_P  6
-#define WORD_R  7
-#define WORD_S  8
-#define WORD_T  9
-#define WORD_X  10
+#define WORD_F  0  // Feedrate
+#define WORD_N  5  // Line number
+#define WORD_P  6  // G10 or Dwell parameters
+#define WORD_S  8  // Spindle speed
+#define WORD_T  9  // Tool selection
+#define WORD_X  10  // Motion axis
 #define WORD_Y  11
 #define WORD_Z  12
 #define WORD_A  13
@@ -147,13 +130,10 @@
 
 // NOTE: When this struct is zeroed, the above defines set the defaults for the system.
 typedef struct {
-  uint8_t motion;          // {G0,G1,G2,G3,G38.2,G80}
+  uint8_t motion;          // {G0,G1,G38.2,G80}
   uint8_t feed_rate;       // {G93,G94}
   uint8_t units;           // {G20,G21}
   uint8_t distance;        // {G90,G91}
-  // uint8_t distance_arc; // {G91.1} NOTE: Don't track. Only default supported.
-  uint8_t plane_select;    // {G17,G18,G19}
-  // uint8_t cutter_comp;  // {G40} NOTE: Don't track. Only default supported.
   uint8_t tool_length;     // {G43.1,G49}
   uint8_t coord_select;    // {G54,G55,G56,G57,G58,G59}
   // uint8_t control;      // {G61} NOTE: Don't track. Only default supported.
@@ -164,15 +144,11 @@ typedef struct {
 
 typedef struct {
   float f;         // Feed
-  float ijk[3];    // I,J,K Axis arc offsets
-  uint8_t l;       // G10 or canned cycles parameters
   int32_t n;       // Line number
   float p;         // G10 or dwell parameters
-  // float q;      // G82 peck drilling
-  float r;         // Arc radius
   float s;         // Spindle speed
   uint8_t t;       // Tool selection
-  float xyz[N_AXIS];    // X,Y,Z,A Translational axes
+  float xyz[N_AXIS];    // X,Y,Z,A,B,C,U,V Motion axis
 } gc_values_t;
 
 
