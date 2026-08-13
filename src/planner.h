@@ -28,7 +28,7 @@
   #ifdef USE_LINE_NUMBERS
     #define BLOCK_BUFFER_SIZE 25
   #else
-    #define BLOCK_BUFFER_SIZE 64
+    #define BLOCK_BUFFER_SIZE 18
   #endif
 #endif
 

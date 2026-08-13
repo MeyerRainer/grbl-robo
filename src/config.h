@@ -250,16 +250,6 @@
 // spindle RPM output lower than this value will be set to this value.
 // #define MINIMUM_SPINDLE_PWM 5 // Default disabled. Uncomment to enable. Integer (0-255)
 
-// By default on a 328p(Uno), Grbl combines the variable spindle PWM and the enable into one pin to help 
-// preserve I/O pins. For certain setups, these may need to be separate pins. This configure option uses
-// the spindle direction pin(D13) as a separate spindle enable pin along with spindle speed PWM on pin D11. 
-// NOTE: This configure option only works with VARIABLE_SPINDLE enabled and a 328p processor (Uno). 
-// NOTE: With no direction pin, the spindle clockwise M4 g-code command will be removed. M3 and M5 still work.
-// NOTE: BEWARE! The Arduino bootloader toggles the D13 pin when it powers up. If you flash Grbl with
-// a programmer (you can use a spare Arduino as "Arduino as ISP". Search the web on how to wire this.), 
-// this D13 LED toggling should go away. We haven't tested this though. Please report how it goes!
-// #define USE_SPINDLE_DIR_AS_ENABLE_PIN // Default disabled. Uncomment to enable.
-
 // With this enabled, Grbl sends back an echo of the line it has received, which has been pre-parsed (spaces
 // removed, capitalized letters, no comments) and is to be immediately executed by Grbl. Echoes will not be 
 // sent upon a line buffer overflow, but should for all normal lines sent to Grbl. For example, if a user 
@@ -283,12 +273,6 @@
 // machines, perhaps to 0.1mm/min, but your success may vary based on multiple factors.
 #define MINIMUM_FEED_RATE 1.0 // (mm/min)
 
-// Number of arc generation iterations by small angle approximation before exact arc trajectory 
-// correction with expensive sin() and cos() calcualtions. This parameter maybe decreased if there 
-// are issues with the accuracy of the arc generations, or increased if arc execution is getting
-// bogged down by too many trig calculations. 
-#define N_ARC_CORRECTION 12 // Integer (1-255)
-
 // The arc G2/3 g-code standard is problematic by definition. Radius-based arcs have horrible numerical 
 // errors when arc at semi-circles(pi) or full-circles(2*pi). Offset-based arcs are much more accurate 
 // but still have a problem when arcs are full-circles (2*pi). This define accounts for the floating 
@@ -306,23 +290,12 @@
 // time step. Also, keep in mind that the Arduino delay timer is not very accurate for long delays.
 #define DWELL_TIME_STEP 50 // Integer (1-255) (milliseconds)
 
-// Creates a delay between the direction pin setting and corresponding step pulse by creating
-// another interrupt (Timer2 compare) to manage it. The main Grbl interrupt (Timer1 compare) 
-// sets the direction pins, and does not immediately set the stepper pins, as it would in 
-// normal operation. The Timer2 compare fires next to set the stepper pins after the step 
-// pulse delay time, and Timer2 overflow will complete the step pulse, except now delayed 
-// by the step pulse time plus the step pulse delay. (Thanks langwadt for the idea!)
-// NOTE: Uncomment to enable. The recommended delay must be > 3us, and, when added with the
-// user-supplied step pulse time, the total time must not exceed 127us. Reported successful
-// values for certain setups have ranged from 5 to 20us.
-// #define STEP_PULSE_DELAY 10 // Step pulse delay in microseconds. Default disabled.
-
 // The number of linear motions in the planner buffer to be planned at any give time. The vast
 // majority of RAM that Grbl uses is based on this buffer size. Only increase if there is extra 
 // available RAM, like when re-compiling for a Mega or Sanguino. Or decrease if the Arduino
 // begins to crash due to the lack of available RAM or if the CPU is having trouble keeping
 // up with planning new incoming motions as they are executed. 
-// #define BLOCK_BUFFER_SIZE 18  // Uncomment to override default in planner.h.
+#define BLOCK_BUFFER_SIZE 36  // Uncomment to override default in planner.h.
 
 // Governs the size of the intermediary step segment buffer between the step execution algorithm
 // and the planner blocks. Each segment is set of steps executed at a constant velocity over a
@@ -330,7 +303,7 @@
 // block velocity profile is traced exactly. The size of this buffer governs how much step 
 // execution lead time there is for other Grbl processes have to compute and do their thing 
 // before having to come back and refill this buffer, currently at ~50msec of step moves.
-// #define SEGMENT_BUFFER_SIZE 6 // Uncomment to override default in stepper.h.
+#define SEGMENT_BUFFER_SIZE 12 // Uncomment to override default in stepper.h.
 
 // Line buffer size from the serial input stream to be executed. Also, governs the size of 
 // each of the startup blocks, as they are each stored as a string of this size. Make sure
@@ -391,10 +364,6 @@
 
 #if defined(USE_SPINDLE_DIR_AS_ENABLE_PIN) && !defined(VARIABLE_SPINDLE)
   #error "USE_SPINDLE_DIR_AS_ENABLE_PIN may only be used with VARIABLE_SPINDLE enabled"
-#endif
-
-#if defined(USE_SPINDLE_DIR_AS_ENABLE_PIN) && !defined(CPU_MAP_ATMEGA328P)
-  #error "USE_SPINDLE_DIR_AS_ENABLE_PIN may only be used with a 328p processor"
 #endif
 
 // ---------------------------------------------------------------------------------------
