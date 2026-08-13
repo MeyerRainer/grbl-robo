@@ -29,7 +29,7 @@
 // a unique motion. These are defined in the NIST RS274-NGC v3 g-code standard, available online, 
 // and are similar/identical to other g-code interpreters by manufacturers (Haas,Fanuc,Mazak,etc).
 // NOTE: Modal group define values must be sequential and starting from zero.
-#define MODAL_GROUP_G0 0 // [G4,G10,G28,G28.1,G30,G30.1,G53,G92,G92.1] Non-modal
+#define MODAL_GROUP_G0 0 // [G4, G6, G10,G28,G28.1,G30,G30.1,G53,G92,G92.1] Non-modal
 #define MODAL_GROUP_G1 1 // [G0,G1,G38.2,G38.3,G38.4,G38.5,G80] Motion
 #define MODAL_GROUP_G3 3 // [G90,G91] Distance mode
 #define MODAL_GROUP_G5 5 // [G93,G94] Feed rate mode
@@ -38,7 +38,6 @@
 #define MODAL_GROUP_G8 8 // [G43.1,G49] Tool length offset
 #define MODAL_GROUP_G12 9 // [G54,G55,G56,G57,G58,G59] Coordinate system selection
 #define MODAL_GROUP_G13 10 // [G61] Control mode
-
 #define MODAL_GROUP_M4 11  // [M0,M1,M2,M30] Stopping
 #define MODAL_GROUP_M7 12 // [M3,M4,M5] Spindle turning
 #define MODAL_GROUP_M8 13 // [M7,M8,M9] Coolant control
@@ -61,6 +60,7 @@
 #define NON_MODAL_ABSOLUTE_OVERRIDE 7 // G53
 #define NON_MODAL_SET_COORDINATE_OFFSET 8 // G92
 #define NON_MODAL_RESET_COORDINATE_OFFSET 9 //G92.1
+#define NON_MODAL_GRIPPER 10 // G6
 
 // Modal Group G1: Motion modes
 #define MOTION_MODE_SEEK 0 // G0 (Default: Must be zero)
@@ -115,7 +115,7 @@
 // Define parameter word mapping.
 #define WORD_F  0  // Feedrate
 #define WORD_N  5  // Line number
-#define WORD_P  6  // G10 or Dwell parameters
+#define WORD_P  6  // G10, Dwell or Gripper parameters
 #define WORD_S  8  // Spindle speed
 #define WORD_T  9  // Tool selection
 #define WORD_X  10  // Motion axis

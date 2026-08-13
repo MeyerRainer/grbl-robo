@@ -154,3 +154,14 @@
   #define SPINDLE_PWM_PORT    PORTH
   #define SPINDLE_PWM_BIT		4 // MEGA2560 Digital Pin 97
 #endif // End of VARIABLE_SPINDLE
+
+#ifdef SERVO_GRIPPER
+
+  #define GRIPPER_DDR       DDRE
+  #define GRIPPER_PORT      PORTE
+  #define GRIPPER_PWM_BIT         4 // MEGA2560 Digital Pin 2
+  #define SERVO_MIN_TICKS         2000U // 1.0ms pulse width
+  #define SERVO_MAX_TICKS         4000U // 2.0ms pulse width
+  #define SERVO_TOP_TICKS         40000 // 20.0ms period for 50Hz
+
+#endif

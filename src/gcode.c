@@ -144,10 +144,11 @@ uint8_t gc_execute_line(char *line)
               axis_command = AXIS_COMMAND_NON_MODAL;
             }
             // No break. Continues to next line.
-          case 4: case 53: 
+          case 4: case 6: case 53: 
             word_bit = MODAL_GROUP_G0; 
             switch(int_value) {
               case 4: gc_block.non_modal_command = NON_MODAL_DWELL; break; // G4
+              case 6: gc_block.non_modal_command = NON_MODAL_GRIPPER; break; // G6
               case 10: gc_block.non_modal_command = NON_MODAL_SET_COORDINATE_DATA; break; // G10
               case 28:
                 switch(mantissa) {
@@ -444,6 +445,11 @@ uint8_t gc_execute_line(char *line)
     if (bit_isfalse(value_words,bit(WORD_P))) { FAIL(STATUS_GCODE_VALUE_WORD_MISSING); } // [P word missing]
     bit_false(value_words,bit(WORD_P));
   }
+  // [11. Gripper ]: P value missing. P is negative (done.) NOTE: See below.
+    if (gc_block.non_modal_command == NON_MODAL_GRIPPER) {
+    if (bit_isfalse(value_words,bit(WORD_P))) { FAIL(STATUS_GCODE_VALUE_WORD_MISSING); } // [P word missing]
+    bit_false(value_words,bit(WORD_P));
+  }
             
   // [12. Set length units ]: N/A
   // Pre-convert motion axis coordinate values to millimeters, if applicable.
@@ -692,6 +698,7 @@ uint8_t gc_execute_line(char *line)
 
   // [10. Dwell ]:
   if (gc_block.non_modal_command == NON_MODAL_DWELL) { mc_dwell(gc_block.values.p); }
+  if (gc_block.non_modal_command == NON_MODAL_GRIPPER) { gripper_set(gc_block.values.p); }
   
   // [12. Set length units ]:
   gc_state.modal.units = gc_block.modal.units;
