@@ -463,6 +463,12 @@ void report_realtime_status()
       if (idx < (N_AXIS-1)) { printPgmString(PSTR(",")); }
     }
   }
+
+  // Report time
+  if (bit_istrue(settings.status_report_mask, BITFLAG_RT_STATUS_TIME)) {
+    printPgmString(PSTR(",t:"));
+    print_uint32_base10(system_get_millis());
+  }
         
   // Returns the number of active blocks are in the planner buffer.
   if (bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_PLANNER_BUFFER)) {

@@ -45,6 +45,7 @@
 #define BITFLAG_RT_STATUS_PLANNER_BUFFER    bit(2)
 #define BITFLAG_RT_STATUS_SERIAL_RX         bit(3)
 #define BITFLAG_RT_STATUS_LIMIT_PINS        bit(4)
+#define BITFLAG_RT_STATUS_TIME              bit(5)
 
 // Define settings restore bitflags.
 #define SETTINGS_RESTORE_ALL 0xFF // All bitflags

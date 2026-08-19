@@ -31,6 +31,26 @@ void system_init()
   #endif
   CONTROL_PCMSK |= CONTROL_MASK;  // Enable specific pins of the Pin Change Interrupt
   PCICR |= (1 << CONTROL_INT);   // Enable Pin Change Interrupt
+
+  // Set up system timer
+  TCCR4A = 0;
+  TCCR4B = 0;
+
+  TCCR4B |= (1<<WGM42) | (1<<CS41) | (1<<CS40); // CTC Mode + Prescaler /64
+  // Compare match to 1ms period (16MHz / 64prescale) * 0.001sec - 1 = 249.
+  OCR4A = 249;
+
+  TIMSK4 |= (1<<OCIE4A);
+}
+
+ISR(TIMER4_OVF_vect)
+{
+  sys_millis++;
+}
+
+ISR(TIMER4_COMPA_vect)
+{
+    sys_millis++;
 }
 
 
@@ -278,3 +298,15 @@ void system_convert_array_steps_to_mpos(float *position, int32_t *steps)
 }
 
 
+uint32_t system_get_millis()
+{
+  uint32_t ms;
+
+  // Atomically read sys_millis.
+  uint8_t sreg = SREG;
+  cli();
+  ms = sys_millis;
+  SREG = sreg;
+
+  return ms;
+}
