@@ -12,7 +12,7 @@ Additional features:
   The PWM signal on pin D2 can be controlled via G-code as follows:
   G6P0 -> 1ms pulse width
   G6P0.5 -> 1.5ms pulse width
-  G6p1 -> 2ms pulse width
+  G6P1 -> 2ms pulse width
 
   32-bit unsigned integer timestamp on realtime status report
   Running milliseconds are reported in the status report, allowing the control software do speed estimation.
