@@ -2,6 +2,8 @@ GRBL 0.9j modified for robot manipulator controlling purposes.
 
 Works only on Arduino Mega (AtMega2560).
 
+Install and configure like any other GRBL.
+
 Additional features:
   Controls 8 axes. Currently, number of axis is not configurable. If not used, they can just be ignored in G-code and will stay zero.
   Axis letters are [X, Y, Z, A, B, C, U, V].
